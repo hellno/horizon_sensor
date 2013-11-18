@@ -26,6 +26,8 @@ ofstream outputPic;
 
 const int width = 1024;
 const int height = 1024;
+const double brennweite = 12.69e-3;
+
 
 const double pxSize = 1e-5;
 const long int periapsis = 36000000;
@@ -119,8 +121,8 @@ int surroundingWhitePixels(int width , int height){
 
 void writeBWImageToFile(string filename, int imageStart){
 	string outputFilename = appendToFilename(filename, "BW");
-	printf("imgStart: %d in: %s, out: %s\n", 
-		imageStart, filename.c_str(), outputFilename.c_str());
+	//printf("imgStart: %d in: %s, out: %s\n", 
+	//	imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
 
 	outputPic.open(outputFilename);
@@ -140,15 +142,15 @@ void writeBWImageToFile(string filename, int imageStart){
 			}
 		}
 	}
-	printf("%d white pixels written\n", cnt);
+	//printf("%d white pixels written\n", cnt);
 	outputPic.close();
 	inputPic.close();
 }
 
 void writeErodedImageToFile(string filename, int imageStart){
 	string outputFilename = appendToFilename(filename, "Erod");
-	printf("imgStart: %d in: %s, out: %s\n", 
-		imageStart, filename.c_str(), outputFilename.c_str());
+	//printf("imgStart: %d in: %s, out: %s\n", 
+	//	imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
 
 	outputPic.open(outputFilename);
@@ -168,15 +170,15 @@ void writeErodedImageToFile(string filename, int imageStart){
 			}
 		}
 	}
-	printf("%d white pixels written\n", cnt);
+	//printf("%d white pixels written\n", cnt);
 	outputPic.close();
 	inputPic.close();
 }
 
 void writeCircleImageToFileWithCenter(string filename, int imageStart, int centerX=0, int centerY=0){
 	string outputFilename = appendToFilename(filename, "Circle");
-	printf("imgStart: %d in: %s, out: %s\n", 
-		imageStart, filename.c_str(), outputFilename.c_str());
+	//printf("imgStart: %d in: %s, out: %s\n", 
+	//	imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
 
 	outputPic.open(outputFilename);
@@ -201,7 +203,7 @@ void writeCircleImageToFileWithCenter(string filename, int imageStart, int cente
 			}
 		}
 	}
-	printf("%d white pixels written\n", cnt);
+	//printf("%d white pixels written\n", cnt);
 	outputPic.close();
 	inputPic.close();
 }
@@ -289,7 +291,7 @@ void createBinaryImage(int threshold){
 			}
 		}
 	}
-	printf("%d write pixels saved\n", cnt);
+	//printf("%d white pixels saved\n", cnt);
 }
 
 void erodeImage(int threshold){
@@ -352,30 +354,41 @@ coordinates findCircleCenter(){
 	return newCenter;
 }
 
-int calcEarthVector(coordinates coord, double radius){
-	double prop = (M_PI * pow(radius, 2))/(height * width);
-	int cnt = 0;
-	for(int x = 0;x < width; x++){
-		for(int y = 0;y < height; y++){
-			if(bwMatrix[x][y])
-				cnt++;
-		}
-	}
-	printf("cnt: %d\n", cnt);
-	double detProp = cnt/(1024.0*1024.0);
-	printf("Mars/Image: \n prop %f, pxProp %f\n", prop, detProp);
-
-	double diameter = 2.0 * radius;
-	double imageDiameter = diameter * pxSize;
-
-	double focalDistance = detProp*(imageDiameter * periapsis) / marsDiameter;
-	double fov = atan2(pxSize * height, focalDistance );
+void calcEarthVector(coordinates planetCenter, double radius){
+	coordinates picCenter;
+	picCenter.x = height / 2;
+	picCenter.y = width / 2;
 	
-	printf("Radius: %f\n", radius);
-	printf("ImageDiameter: %f\n", imageDiameter);
-	printf("Brennweite: %f\n", focalDistance);
-	printf("Sichtfeld: %f\n", (fov / M_PI) * 180);
-	return 0;
+	int dx = planetCenter.x - picCenter.x;
+	int dy = planetCenter.y - picCenter.y;
+        
+    double picHeightInKM = tan(38.9)*periapsis;
+
+    double dxKM = ((float)dx / height) * picHeightInKM;
+    double dyKM = ((float)dy / height) * picHeightInKM;
+
+	printf("Abweichung[KM]: x%f;y%f\n", dxKM/1000,dyKM/1000);
+
+    double dxDeg = (atan(dxKM / periapsis)*360)/(2*M_PI);
+    double dyDeg = (atan(dyKM / periapsis)*360)/(2*M_PI);
+	printf("Abweichung[deg]: x%f;y%f\n", dxDeg,dyDeg);
+}
+
+void printFocalDistanceAndFieldOfView(void){
+	double prop = (M_PI * pow(radius, 2))/(height * width);
+    printf("\nMars/Image: \nratio: %f\n", prop);
+
+    double diameter = 2.0 * radius;
+    double imageDiameter = diameter * pxSize;
+
+    double focalDistance = prop*(imageDiameter * periapsis) / marsDiameter;
+    double fov = atan2(pxSize * height, focalDistance );
+        
+    printf("Radius: %f\n", radius);
+    printf("ImageDiameter: %f\n", imageDiameter);
+    printf("Brennweite: %f\n", focalDistance);
+    printf("Sichtfeld: %f°\n", (fov / M_PI) * 180);
+
 }
 
 int imageStartInBMP(string filename){
@@ -408,5 +421,6 @@ int main(){
 	coordinates center = findCircleCenter();
 	writeCircleImageToFileWithCenter(filename, imageStart, center.x, center.y);
 	calcEarthVector(center, radius);
+	printFocalDistanceAndFieldOfView();
 	return 0;
 }
