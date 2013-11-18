@@ -25,12 +25,12 @@ bool bwMatrix[width][height];
 */
 int getFileSize(string filename){
 	long begin,end;
-	inputPic.close();
+	// inputPic.close();
 	inputPic.open(filename);
   	begin = inputPic.tellg();
   	inputPic.seekg(0,ios::end); 
   	end = inputPic.tellg();
-  	inputPic.close();
+  	// inputPic.close();
   	return (end-begin);
 }
 
@@ -40,7 +40,7 @@ int pixelColorAvg(pixel p){
 
 void printPixel(pixel p){
 	printf("RGB: %d|%d|%d     \r",p.r,p.g,p.b);
-	printf("AVG: %d", pixelColorAvg(p));
+	//printf("AVG: %d", pixelColorAvg(p));
 }
 
 string appendToFilename(string filename, string addition){
@@ -52,7 +52,7 @@ void importImageFile(string filename, int imageStart){
 	inputPic.close();
 	inputPic.open(filename);
 	inputPic.seekg(0,ios_base::beg);
-	for (int i=0; i < 10; i++){
+	for (int i=0; i < imageStart; i++){
 		inputPic.get();
 	}
 	for(int x=0;x < width; x++){
@@ -86,12 +86,17 @@ void writeWhitePixel(){
 	1 or 0 if bigger/smaller than threshold
 */
 void createBinaryImage(int threshold){
+	int cnt = 0;
 	for(int x=0;x < width; x++){
 		for(int y = 0;y<height;y++){
 			bwMatrix[x][y] = (pixelColorAvg(pxlMatrix[x][y])  > threshold);
+			if(bwMatrix[x][y]){
+				cnt++;
+			}
 			printf("BW: %d  \r", bwMatrix[x][y]);
 		}
 	}
+	printf("%d write pixels saved\n", cnt);
 }
 
 void writeBWImageToFile(string filename, int imageStart){
@@ -99,8 +104,8 @@ void writeBWImageToFile(string filename, int imageStart){
 	printf("imgStart: %d\nin: %s, out: %s\n", 
 		imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
-	inputPic.close();
-	outputPic.close();
+	// inputPic.close();
+	// outputPic.close();
 	
 	outputPic.open(outputFilename);
 	inputPic.open(filename);
@@ -112,16 +117,10 @@ void writeBWImageToFile(string filename, int imageStart){
 	for(int x = 0;x < width; x++){
 		for(int y = 0;y < height; y++){
 			if(bwMatrix[x][y]){
-				//writeWhitePixel();
-				outputPic.put(255);
-				outputPic.put(255);
-				outputPic.put(255);
+				writeWhitePixel();
 				cnt++;
 			} else{
-				//writeBlackPixel();
-				outputPic.put(0);
-				outputPic.put(0);
-				outputPic.put(0);
+				writeBlackPixel();
 			}
 		}
 	}
@@ -131,7 +130,7 @@ void writeBWImageToFile(string filename, int imageStart){
 }
 
 void erodeImage(int threshold, int pixelCount){
-
+	int whiteCount = 0;
 }
 
 void subtractImages(string filenameA, string filenameB, string outputFilename){
@@ -143,7 +142,6 @@ int findCircleCenter(){
 }
 
 int calcEarthVector(int coordinates){
-
 	return 0;
 }
 
@@ -163,37 +161,12 @@ int main(){
 	inputPic.close();
 
 	printf("imageStart: %d\n", imageStart);
+	
 	int size = getFileSize(filename);
 	printf("%s: %dkb\n", filename.c_str(), size/1000);
+	
 	importImageFile(filename, imageStart);
 	createBinaryImage(8);
 	writeBWImageToFile(filename, imageStart);
 	return 0;
 }
-
-// void printImageByteValues(string filename){
-// 	inputPic.close();
-	
-// 	char c;
-// 	int cnt=0;
-
-// 	inputPic.open(filename);
-// 	long start = inputPic.tellg();
-// 	inputPic.close();
-// 	int filesize = getFileSize(filename);
-// 	inputPic.open(filename);
-// 	while (inputPic.good()){
-//         cnt++;
-//         bool val = (cnt) > start && (cnt)<filesize-1;
-//         c = inputPic.get();
-//         if(val) {
-//         	printf("CurCnt: %d %d ", cnt, val);
-//            	std::cout << std::hex << (short unsigned int)c << '\n';
-//            	//printf("%d\n",(short unsigned int)c);	
-//         }
-//     }
-
-//     printf("Anzahl Bytes: %d\n", cnt);
-//     printf("start: %ld\n", start);
-// 	printf("filesize: %d\n", filesize);
-// }
