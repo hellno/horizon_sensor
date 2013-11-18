@@ -12,6 +12,12 @@ struct pixel
 	unsigned int b;
 };
 
+struct coordinates
+{
+	int x;
+	int y;
+};
+
 ifstream inputPic;
 ofstream outputPic;
 
@@ -153,7 +159,7 @@ void writeErodedImageToFile(string filename, int imageStart){
 	inputPic.close();
 }
 
-void writeCircleImageToFile(string filename, int imageStart){
+void writeCircleImageToFileWithCenter(string filename, int imageStart, int centerX=0, int centerY=0){
 	string outputFilename = appendToFilename(filename, "Circle");
 	printf("imgStart: %d\nin: %s, out: %s\n", 
 		imageStart, filename.c_str(), outputFilename.c_str());
@@ -168,7 +174,12 @@ void writeCircleImageToFile(string filename, int imageStart){
 	}
 	for(int x = 0;x < width; x++){
 		for(int y = 0;y < height; y++){
-			if(circleMatrix[x][y]){
+			if(x == centerX && y == centerY){
+				outputPic.put(0);
+				outputPic.put(0);
+				outputPic.put(255);
+			}
+			else if(circleMatrix[x][y]){
 				writeWhitePixel();
 				cnt++;
 			} else{
@@ -181,6 +192,35 @@ void writeCircleImageToFile(string filename, int imageStart){
 	inputPic.close();
 }
 
+int findWhitePixelInRow(int row, int start = 0){
+	if(row < 0 || row > height){
+		return 0;
+	}
+	int i=1;
+	while(!(circleMatrix[row][start + i] &&(i > 20))){
+		i++;
+	}
+	return start + i;
+}
+
+int findWhitePixelInCol(int col, int start = 0){
+	if(col < 0 || col > width){
+		return 0;
+	}
+	int i=1;
+	while(!(circleMatrix[start + i][col] && (i > 20))){
+		i++;
+	}
+	return start + i;
+}
+
+int centerOfTwoPixels(int first, int second){
+	return abs(first + second)/2;
+}
+
+int radiusWithCenter(coordinates center){
+	return 0;
+}
 /*
 	1 or 0 if bigger/smaller than threshold
 */
@@ -220,8 +260,19 @@ void subtractErodedFromBW(void){
 	}
 }
 
-int findCircleCenter(){
-	return 0;
+coordinates findCircleCenter(){
+	coordinates center;
+	center.x = -1;
+	center.y = -1;
+	int firstPixel = findWhitePixelInCol(height / 2);
+	int secondPixel = findWhitePixelInCol(height / 2, firstPixel);
+	center.x = centerOfTwoPixels(firstPixel, secondPixel);
+	printf("_X First: %d, Center: %d, Second: %d\n", firstPixel, center.x, secondPixel);
+	firstPixel = findWhitePixelInRow(width / 2);
+	secondPixel = findWhitePixelInRow(width / 2, firstPixel);
+	center.y = centerOfTwoPixels(firstPixel, secondPixel);
+	printf("_Y First: %d, Center: %d, Second: %d\n", firstPixel, center.y, secondPixel);
+	return center;
 }
 
 int calcEarthVector(int coordinates){
@@ -254,6 +305,8 @@ int main(){
 	erodeImage(7);
 	//writeErodedImageToFile(filename, imageStart);
 	subtractErodedFromBW();
-	writeCircleImageToFile(filename, imageStart);
+	writeCircleImageToFileWithCenter(filename, imageStart);
+	coordinates center = findCircleCenter();
+	writeCircleImageToFileWithCenter(filename, imageStart, center.x, center.y);
 	return 0;
 }
