@@ -6,4 +6,4 @@ Mars horizon sensor in the optical spectrum. CCD-sensor with a solution of 1024x
 
 compile & run
 ===========
-g++ -Wall code.cpp -o code && ./code
+g++ -Wall -std=c++11 code.cpp -o code && ./code

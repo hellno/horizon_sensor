@@ -27,6 +27,13 @@ ofstream outputPic;
 const int width = 1024;
 const int height = 1024;
 
+const double pxSize = 1e-5;
+const long int periapsis = 36000000;
+const long int marsDiameter = 6779000;
+const long int earthDiameter  = 12742000;
+
+double radius;
+
 pixel pxlMatrix[width][height];
 bool bwMatrix[width][height];
 bool erodeMatrix[width][height];
@@ -262,8 +269,8 @@ vector<coordinates> createEdgeList(void){
 coordinates randomCoordinatesAroundCenter(coordinates center){
 	coordinates randCoord;
 	//center +- 1 in every direction 
-	randCoord.x = center.x + 8.0 * rand() /((double) RAND_MAX) - 4.0;
-	randCoord.y = center.y + 8.0 * rand() /((double) RAND_MAX) - 4.0;
+	randCoord.x = center.x + 16.0 * rand() /((double) RAND_MAX) - 8.0;
+	randCoord.y = center.y + 16.0 * rand() /((double) RAND_MAX) - 8.0;
 	//printCoord(randCoord);
 	return randCoord;
 }
@@ -319,16 +326,18 @@ coordinates findCircleCenter(){
 	secondPixel = findWhitePixelInRow(width / 2, firstPixel);
 	center.y = centerOfTwoPixels(firstPixel, secondPixel);
 	printf("_Y First: %d, Center: %d, Second: %d\n", firstPixel, center.y, secondPixel);
-	double radius = radiusWithCenter(center);
+	radius = radiusWithCenter(center);
 	double radiusSquared = pow(radius, 2);
 	vector<coordinates> edgeList = createEdgeList();
 
 	coordinates newCenter;
+	newCenter.x = center.x;
+	newCenter.y = center.y;
 	double currMinSum = std::numeric_limits<double>::max();
 	srand( time( NULL ) ); 
 	for(int i = 0; i < 1000; i++){
 		double distSum = 0;
-		coordinates testCenter = randomCoordinatesAroundCenter(center);
+		coordinates testCenter = randomCoordinatesAroundCenter(newCenter);
 		for(int j = 0; j < edgeList.size(); j++){
 			distSum += leastSquare(radiusSquared, testCenter, edgeList[j]);
 		}
@@ -343,7 +352,14 @@ coordinates findCircleCenter(){
 	return newCenter;
 }
 
-int calcEarthVector(int coordinates){
+int calcEarthVector(coordinates coord, double radius){
+	double diameter = 2.0 * radius;
+	double imageDiameter = diameter * pxSize;
+
+	double focalDistance = (imageDiameter * periapsis) / earthDiameter;
+	double fov = 2 * atan2(pxSize * height, focalDistance * 2);
+	printf("Brennweite: %f\n", focalDistance);
+	printf("Sichtfeld: %f\n", (fov / M_PI) * 180);
 	return 0;
 }
 
@@ -358,7 +374,7 @@ int imageStartInBMP(string filename){
 }
 
 int main(){
-	string filename = "Mars.bmp";
+	string filename = "mars.bmp";
 	int imageStart = imageStartInBMP(filename);
 	inputPic.close();
 
@@ -376,5 +392,6 @@ int main(){
 	writeCircleImageToFileWithCenter(filename, imageStart);
 	coordinates center = findCircleCenter();
 	writeCircleImageToFileWithCenter(filename, imageStart, center.x, center.y);
+	calcEarthVector(center, radius);
 	return 0;
 }
