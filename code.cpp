@@ -2,6 +2,9 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <limits>
+#include <vector>
+#include <math.h>
 
 using namespace std;
 
@@ -49,6 +52,10 @@ int pixelColorAvg(pixel p){
 void printPixel(pixel p){
 	printf("RGB: %d|%d|%d     \r",p.r,p.g,p.b);
 	//printf("AVG: %d", pixelColorAvg(p));
+}
+
+void printCoord(coordinates c){
+	printf("(%d|%d)\n",c.x,c.y);
 }
 
 string appendToFilename(string filename, string addition){
@@ -105,7 +112,7 @@ int surroundingWhitePixels(int width , int height){
 
 void writeBWImageToFile(string filename, int imageStart){
 	string outputFilename = appendToFilename(filename, "BW");
-	printf("imgStart: %d\nin: %s, out: %s\n", 
+	printf("imgStart: %d in: %s, out: %s\n", 
 		imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
 
@@ -133,7 +140,7 @@ void writeBWImageToFile(string filename, int imageStart){
 
 void writeErodedImageToFile(string filename, int imageStart){
 	string outputFilename = appendToFilename(filename, "Erod");
-	printf("imgStart: %d\nin: %s, out: %s\n", 
+	printf("imgStart: %d in: %s, out: %s\n", 
 		imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
 
@@ -161,7 +168,7 @@ void writeErodedImageToFile(string filename, int imageStart){
 
 void writeCircleImageToFileWithCenter(string filename, int imageStart, int centerX=0, int centerY=0){
 	string outputFilename = appendToFilename(filename, "Circle");
-	printf("imgStart: %d\nin: %s, out: %s\n", 
+	printf("imgStart: %d in: %s, out: %s\n", 
 		imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
 
@@ -218,12 +225,53 @@ int centerOfTwoPixels(int first, int second){
 	return abs(first + second)/2;
 }
 
-int radiusWithCenter(coordinates center){
-	return 0;
+double radiusWithCenter(coordinates center){
+	int i=0;
+	double radius = 0;
+	while(!circleMatrix[center.x - i][center.y]){
+		i++;
+	}
+	radius = i;
+	i = 0;
+	while(!circleMatrix[center.x][center.y + i]){
+		i++;
+	}
+	radius = (radius+i)/2.0;
+	printf("Radius: %f\n",radius);
+	return radius;
 }
-/*
-	1 or 0 if bigger/smaller than threshold
-*/
+
+vector<coordinates> createEdgeList(void){
+	vector<coordinates> edgeVector;
+	int cnt = 0;
+	for(int x = 0;x < width; x++){
+		for(int y = 0;y < height; y++){
+			if(circleMatrix[x][y]){
+				coordinates newC;
+				newC.x = x;
+				newC.y = y;
+				edgeVector.push_back(newC);
+				cnt++;
+			}
+		}
+	}
+	printf("Edge contains %d px\n", cnt);
+	return edgeVector;
+}
+
+coordinates randomCoordinatesAroundCenter(coordinates center){
+	coordinates randCoord;
+	//center +- 1 in every direction 
+	randCoord.x = center.x + 8.0 * rand() /((double) RAND_MAX) - 4.0;
+	randCoord.y = center.y + 8.0 * rand() /((double) RAND_MAX) - 4.0;
+	//printCoord(randCoord);
+	return randCoord;
+}
+
+double leastSquare(int radiusSquared, coordinates testCenter, coordinates edgeCoord){
+	return pow(sqrt(pow(edgeCoord.y-testCenter.y,2)+pow(edgeCoord.x-testCenter.x,2)),2);
+}
+
 void createBinaryImage(int threshold){
 	int cnt = 0;
 	for(int x=0;x < width; x++){
@@ -232,7 +280,6 @@ void createBinaryImage(int threshold){
 			if(bwMatrix[x][y]){
 				cnt++;
 			}
-			//printf("BW: %d  \r", bwMatrix[x][y]);
 		}
 	}
 	printf("%d write pixels saved\n", cnt);
@@ -272,7 +319,28 @@ coordinates findCircleCenter(){
 	secondPixel = findWhitePixelInRow(width / 2, firstPixel);
 	center.y = centerOfTwoPixels(firstPixel, secondPixel);
 	printf("_Y First: %d, Center: %d, Second: %d\n", firstPixel, center.y, secondPixel);
-	return center;
+	double radius = radiusWithCenter(center);
+	double radiusSquared = pow(radius, 2);
+	vector<coordinates> edgeList = createEdgeList();
+
+	coordinates newCenter;
+	double currMinSum = std::numeric_limits<double>::max();
+	srand( time( NULL ) ); 
+	for(int i = 0; i < 1000; i++){
+		double distSum = 0;
+		coordinates testCenter = randomCoordinatesAroundCenter(center);
+		for(int j = 0; j < edgeList.size(); j++){
+			distSum += leastSquare(radiusSquared, testCenter, edgeList[j]);
+		}
+		if(distSum < currMinSum){
+			currMinSum = distSum;
+			newCenter.x = testCenter.x;
+			newCenter.y = testCenter.y;
+			printf("new center");
+			printCoord(newCenter);
+		}
+	}
+	return newCenter;
 }
 
 int calcEarthVector(int coordinates){
@@ -303,7 +371,7 @@ int main(){
 	createBinaryImage(8);
 	writeBWImageToFile(filename, imageStart);
 	erodeImage(7);
-	//writeErodedImageToFile(filename, imageStart);
+	writeErodedImageToFile(filename, imageStart);
 	subtractErodedFromBW();
 	writeCircleImageToFileWithCenter(filename, imageStart);
 	coordinates center = findCircleCenter();
