@@ -20,6 +20,8 @@ const int height = 1024;
 
 pixel pxlMatrix[width][height];
 bool bwMatrix[width][height];
+bool erodeMatrix[width][height];
+bool circleMatrix[width][height];
 
 /* returns file size in kb
 */
@@ -61,7 +63,7 @@ void importImageFile(string filename, int imageStart){
 			p.r = inputPic.get();
 			p.g = inputPic.get();
 			p.b = inputPic.get();
-			printPixel(p);
+			//printPixel(p);
 			pxlMatrix[x][y] = p;
 		}
 	}
@@ -82,21 +84,17 @@ void writeBlackPixel(){
 void writeWhitePixel(){
 	writePixelWithValue((unsigned int)255);
 }
-/*
-	1 or 0 if bigger/smaller than threshold
-*/
-void createBinaryImage(int threshold){
-	int cnt = 0;
-	for(int x=0;x < width; x++){
-		for(int y = 0;y<height;y++){
-			bwMatrix[x][y] = (pixelColorAvg(pxlMatrix[x][y])  > threshold);
-			if(bwMatrix[x][y]){
-				cnt++;
-			}
-			printf("BW: %d  \r", bwMatrix[x][y]);
+
+int surroundingWhitePixels(int width , int height){
+	int sum = 0;
+	for(int i=-1; i<= 1;i++){
+		for(int j=-1; j<= 1;j++){
+			sum += bwMatrix[width + i][height + j];
 		}
 	}
-	printf("%d write pixels saved\n", cnt);
+	if(bwMatrix[width][height])
+		sum -= 1;
+	return sum;
 }
 
 void writeBWImageToFile(string filename, int imageStart){
@@ -104,9 +102,7 @@ void writeBWImageToFile(string filename, int imageStart){
 	printf("imgStart: %d\nin: %s, out: %s\n", 
 		imageStart, filename.c_str(), outputFilename.c_str());
 	int cnt = 0;
-	// inputPic.close();
-	// outputPic.close();
-	
+
 	outputPic.open(outputFilename);
 	inputPic.open(filename);
 	inputPic.seekg(0,ios_base::beg);
@@ -129,12 +125,99 @@ void writeBWImageToFile(string filename, int imageStart){
 	inputPic.close();
 }
 
-void erodeImage(int threshold, int pixelCount){
-	int whiteCount = 0;
+void writeErodedImageToFile(string filename, int imageStart){
+	string outputFilename = appendToFilename(filename, "Erod");
+	printf("imgStart: %d\nin: %s, out: %s\n", 
+		imageStart, filename.c_str(), outputFilename.c_str());
+	int cnt = 0;
+
+	outputPic.open(outputFilename);
+	inputPic.open(filename);
+	inputPic.seekg(0,ios_base::beg);
+	
+	for(int i = 0; i < imageStart; i++){
+		outputPic.put(inputPic.get());
+	}
+	for(int x = 0;x < width; x++){
+		for(int y = 0;y < height; y++){
+			if(erodeMatrix[x][y]){
+				writeWhitePixel();
+				cnt++;
+			} else{
+				writeBlackPixel();
+			}
+		}
+	}
+	printf("%d white pixels written\n", cnt);
+	outputPic.close();
+	inputPic.close();
 }
 
-void subtractImages(string filenameA, string filenameB, string outputFilename){
+void writeCircleImageToFile(string filename, int imageStart){
+	string outputFilename = appendToFilename(filename, "Circle");
+	printf("imgStart: %d\nin: %s, out: %s\n", 
+		imageStart, filename.c_str(), outputFilename.c_str());
+	int cnt = 0;
 
+	outputPic.open(outputFilename);
+	inputPic.open(filename);
+	inputPic.seekg(0,ios_base::beg);
+	
+	for(int i = 0; i < imageStart; i++){
+		outputPic.put(inputPic.get());
+	}
+	for(int x = 0;x < width; x++){
+		for(int y = 0;y < height; y++){
+			if(circleMatrix[x][y]){
+				writeWhitePixel();
+				cnt++;
+			} else{
+				writeBlackPixel();
+			}
+		}
+	}
+	printf("%d white pixels written\n", cnt);
+	outputPic.close();
+	inputPic.close();
+}
+
+/*
+	1 or 0 if bigger/smaller than threshold
+*/
+void createBinaryImage(int threshold){
+	int cnt = 0;
+	for(int x=0;x < width; x++){
+		for(int y = 0;y<height;y++){
+			bwMatrix[x][y] = (pixelColorAvg(pxlMatrix[x][y])  > threshold);
+			if(bwMatrix[x][y]){
+				cnt++;
+			}
+			//printf("BW: %d  \r", bwMatrix[x][y]);
+		}
+	}
+	printf("%d write pixels saved\n", cnt);
+}
+
+void erodeImage(int threshold){
+	int whiteCount = 0;
+	for(int x = 1;x < width - 1; x++){
+		for(int y = 1;y < height - 1; y++){
+			if(bwMatrix[x][y]){
+				whiteCount = surroundingWhitePixels(x,y);
+				erodeMatrix[x][y] = (whiteCount > threshold);
+			}else{
+				erodeMatrix[x][y] = false;
+			}
+		}
+	}
+}
+
+void subtractErodedFromBW(void){
+	for(int x = 0;x < width; x++){
+		for(int y = 0;y < height; y++){
+			circleMatrix[x][y] = bwMatrix[x][y] - erodeMatrix[x][y];
+		}
+	}
 }
 
 int findCircleCenter(){
@@ -168,5 +251,9 @@ int main(){
 	importImageFile(filename, imageStart);
 	createBinaryImage(8);
 	writeBWImageToFile(filename, imageStart);
+	erodeImage(7);
+	//writeErodedImageToFile(filename, imageStart);
+	subtractErodedFromBW();
+	writeCircleImageToFile(filename, imageStart);
 	return 0;
 }
