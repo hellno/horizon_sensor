@@ -353,11 +353,26 @@ coordinates findCircleCenter(){
 }
 
 int calcEarthVector(coordinates coord, double radius){
+	double prop = (M_PI * pow(radius, 2))/(height * width);
+	int cnt = 0;
+	for(int x = 0;x < width; x++){
+		for(int y = 0;y < height; y++){
+			if(bwMatrix[x][y])
+				cnt++;
+		}
+	}
+	printf("cnt: %d\n", cnt);
+	double detProp = cnt/(1024.0*1024.0);
+	printf("Mars/Image: \n prop %f, pxProp %f\n", prop, detProp);
+
 	double diameter = 2.0 * radius;
 	double imageDiameter = diameter * pxSize;
 
-	double focalDistance = (imageDiameter * periapsis) / earthDiameter;
-	double fov = 2 * atan2(pxSize * height, focalDistance * 2);
+	double focalDistance = detProp*(imageDiameter * periapsis) / marsDiameter;
+	double fov = atan2(pxSize * height, focalDistance );
+	
+	printf("Radius: %f\n", radius);
+	printf("ImageDiameter: %f\n", imageDiameter);
 	printf("Brennweite: %f\n", focalDistance);
 	printf("Sichtfeld: %f\n", (fov / M_PI) * 180);
 	return 0;
@@ -374,7 +389,7 @@ int imageStartInBMP(string filename){
 }
 
 int main(){
-	string filename = "mars.bmp";
+	string filename = "Mars.bmp";
 	int imageStart = imageStartInBMP(filename);
 	inputPic.close();
 
